@@ -11,36 +11,42 @@ const app = express();
 // Environment Variables
 // ======================
 const PORT = process.env.PORT || 8080;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000"; // Default to localhost if not set
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+
 const ALLOWED_ORIGINS = [
   FRONTEND_URL,
-  "http://localhost:3000" // Keep this if you want to allow both .env URL and localhost
+  "http://localhost:3000", // Optional fallback for local dev
 ];
 
-// Enhanced CORS
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    // Normalize URLs by removing trailing slashes for consistent comparison
-    const originNormalized = origin.replace(/\/$/, "");
-    const isAllowed = ALLOWED_ORIGINS.some(allowedUrl => 
-      originNormalized === allowedUrl.replace(/\/$/, "")
-    );
+// ======================
+// Middleware
+// ======================
 
-    if (isAllowed) {
-      console.log(`✅ Allowed CORS for: ${origin}`);
-      callback(null, true);
-    } else {
-      console.warn(`🚨 Blocked CORS for: ${origin}`);
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"] // Explicitly allow needed headers
-}));
+app.use(express.json());
+app.use(cookieParser());
+
+// ✅ Only ONE CORS setup — remove the duplicate below
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // Allow non-browser requests
+
+      const originNormalized = origin.replace(/\/$/, "");
+      const isAllowed = ALLOWED_ORIGINS.some((url) => originNormalized === url.replace(/\/$/, ""));
+
+      if (isAllowed) {
+        console.log(`✅ Allowed CORS for: ${origin}`);
+        return callback(null, true);
+      } else {
+        console.warn(`🚨 Blocked CORS for: ${origin}`);
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // ======================
 // Database Connection
@@ -51,77 +57,54 @@ const connectDB = async () => {
     console.log("✅ MongoDB connected");
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err.message);
-    process.exit(1); // Optional: exit the app if DB fails
+    process.exit(1);
   }
 };
-
-
-// ======================
-// Middleware
-// ======================
-app.use(express.json());
-app.use(cookieParser());
-
-// Enhanced CORS
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // Allow non-browser requests (e.g., Postman)
-    
-    const originNormalized = origin.replace(/\/$/, "");
-    const isAllowed = ALLOWED_ORIGINS.some(url => 
-      originNormalized === url.replace(/\/$/, "")
-    );
-
-    if (isAllowed) {
-      console.log(`✅ Allowed CORS for: ${origin}`);
-      callback(null, true);
-    } else {
-      console.warn(`🚨 Blocked CORS for: ${origin}`);
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-}));
 
 // ======================
 // Routes
 // ======================
+
 // Health Check
 app.get("/api/test", (req, res) => {
-  res.json({ 
+  res.json({
     status: "✅ Backend operational",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development"
+    environment: process.env.NODE_ENV || "development",
   });
 });
 
-
-app.get("/", (req, res) => {
-  res.send("✅ Backend is running. Visit /api/... for endpoints.");
-});
-
-
-app.use(express.static(path.join(__dirname, "public")));
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-
-// API Routes
+// API Endpoints
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/applicants", require("./routes/applicantRoutes"));
 app.use("/api/admins", require("./routes/adminRoutes"));
 app.use("/api/assessors", require("./routes/assessorRoutes"));
 
 // ======================
+// Static File Handling (Frontend support if needed)
+// ======================
+
+// Only do this if you're serving frontend files directly from backend
+// Otherwise, delete these if you're deploying frontend separately (like in Railway)
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/", (req, res) => {
+  res.send("✅ Backend is running. Visit /api/... for endpoints.");
+});
+
+// This line assumes there's an index.html in `public/`
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// ======================
 // Error Handling
 // ======================
 app.use((err, req, res, next) => {
-  console.error("❌ Server error:", err);
-  res.status(500).json({ 
+  console.error("❌ Server error:", err.message);
+  res.status(500).json({
     success: false,
-    error: err.message || "Internal server error"
+    error: err.message || "Internal server error",
   });
 });
 
@@ -133,8 +116,8 @@ app.use((err, req, res, next) => {
     await connectDB();
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`
-      🚀 Server running on port ${PORT}
-      🌐 Allowed Origins: ${ALLOWED_ORIGINS.join(", ")}
+🚀 Server running on port ${PORT}
+🌐 Allowed Origins: ${ALLOWED_ORIGINS.join(", ")}
       `);
     });
   } catch (err) {
