@@ -60,7 +60,7 @@ app.use(cors({
 }));
 
 // Serve static frontend files (if bundled with backend)
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "index.html")));
 
 // ======================
 // Routes
@@ -82,7 +82,7 @@ app.use("/api/assessors", require("./routes/assessorRoutes"));
 
 // Frontend Routes (Fallback to index.html for SPA)
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 // ======================
