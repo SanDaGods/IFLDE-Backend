@@ -22,15 +22,14 @@ const ALLOWED_ORIGINS = [
 // ======================
 const connectDB = async () => {
   try {
-    mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+    await mongoose.connect(process.env.MONGO_URI);
     console.log("✅ MongoDB connected");
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err.message);
-    process.exit(1);
+    process.exit(1); // Optional: exit the app if DB fails
   }
 };
+
 
 // ======================
 // Middleware
