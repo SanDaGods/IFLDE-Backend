@@ -11,11 +11,36 @@ const app = express();
 // Environment Variables
 // ======================
 const PORT = process.env.PORT || 8080;
-const PROD_FRONTEND_URL = "https://ifldefrontend-production.up.railway.app";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000"; // Default to localhost if not set
 const ALLOWED_ORIGINS = [
-  PROD_FRONTEND_URL,
-  "http://localhost:3000"
+  FRONTEND_URL,
+  "http://localhost:3000" // Keep this if you want to allow both .env URL and localhost
 ];
+
+// Enhanced CORS
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Normalize URLs by removing trailing slashes for consistent comparison
+    const originNormalized = origin.replace(/\/$/, "");
+    const isAllowed = ALLOWED_ORIGINS.some(allowedUrl => 
+      originNormalized === allowedUrl.replace(/\/$/, "")
+    );
+
+    if (isAllowed) {
+      console.log(`✅ Allowed CORS for: ${origin}`);
+      callback(null, true);
+    } else {
+      console.warn(`🚨 Blocked CORS for: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"] // Explicitly allow needed headers
+}));
 
 // ======================
 // Database Connection
@@ -81,8 +106,9 @@ app.use("/api/admins", require("./routes/adminRoutes"));
 app.use("/api/assessors", require("./routes/assessorRoutes"));
 
 // Frontend Routes (Fallback to index.html for SPA)
+// Serve frontend index.html as fallback for any route not handled by above
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "index.html")); // if index.html is at root
 });
 
 // ======================
