@@ -101,6 +101,13 @@ app.get("/", (req, res) => {
   res.send("✅ Backend is running. Visit /api/... for endpoints.");
 });
 
+
+app.use(express.static(path.join(__dirname, "public")));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+
 // API Routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/applicants", require("./routes/applicantRoutes"));
