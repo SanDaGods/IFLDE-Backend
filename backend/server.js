@@ -84,9 +84,6 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 }));
 
-// Serve static frontend files (if bundled with backend)
-app.use(express.static(path.join(__dirname, "index.html")));
-
 // ======================
 // Routes
 // ======================
@@ -104,12 +101,6 @@ app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/applicants", require("./routes/applicantRoutes"));
 app.use("/api/admins", require("./routes/adminRoutes"));
 app.use("/api/assessors", require("./routes/assessorRoutes"));
-
-// Frontend Routes (Fallback to index.html for SPA)
-// Serve frontend index.html as fallback for any route not handled by above
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html")); // if index.html is at root
-});
 
 // ======================
 // Error Handling
