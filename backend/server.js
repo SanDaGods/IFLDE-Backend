@@ -7,71 +7,108 @@ const cors = require("cors");
 
 const app = express();
 
-// ENV Variables
+// ======================
+// Environment Variables
+// ======================
 const PORT = process.env.PORT || 5000;
-const FRONTEND_URL = process.env.FRONTEND_URL?.replace(/\/$/, "") || "http://localhost:3000";
+const PROD_FRONTEND_URL = "https://ifldefrontend-production.up.railway.app";
+const ALLOWED_ORIGINS = [
+  PROD_FRONTEND_URL,
+  "http://localhost:3000"
+];
 
+// ======================
+// Database Connection
+// ======================
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("✅ MongoDB connected");
+  } catch (err) {
+    console.error("❌ MongoDB connection failed:", err.message);
+    process.exit(1);
+  }
+};
+
+// ======================
 // Middleware
+// ======================
 app.use(express.json());
 app.use(cookieParser());
 
-// CORS Configuration
+// Enhanced CORS
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // Allow non-browser requests (e.g., Postman)
+    
+    const originNormalized = origin.replace(/\/$/, "");
+    const isAllowed = ALLOWED_ORIGINS.some(url => 
+      originNormalized === url.replace(/\/$/, "")
+    );
+
+    if (isAllowed) {
+      console.log(`✅ Allowed CORS for: ${origin}`);
+      callback(null, true);
+    } else {
+      console.warn(`🚨 Blocked CORS for: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
-  exposedHeaders: ["set-cookie"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 }));
 
-console.log(`🌐 Allowed origin for CORS: ${FRONTEND_URL}`);
+// Serve static frontend files (if bundled with backend)
+app.use(express.static(path.join(__dirname, "public")));
 
-// Serve static frontend if built into backend (optional)
-app.use(express.static(path.join(__dirname, "frontend")));
-
-// MongoDB Connection
-const connectDB = require("./config/db");
-
+// ======================
 // Routes
-const routes = require("./routes");
-const applicants = require("./routes/applicantRoutes");
-const admins = require("./routes/adminRoutes");
-const assessors = require("./routes/assessorRoutes");
-const authRoutes = require("./routes/authRoutes");
-
-app.use("/", routes);
-app.use("/applicants", applicants);
-app.use("/admins", admins);
-app.use("/assessors", assessors);
-app.use("/api", authRoutes);
-
+// ======================
 // Health Check
 app.get("/api/test", (req, res) => {
-  res.json({ message: "✅ Backend working and CORS allowed." });
-});
-
-// Base Route
-app.get("/", (req, res) => {
-  res.send("✅ ETEEAP Backend is live.");
-});
-
-// Global Error Handler
-app.use((err, req, res, next) => {
-  console.error("❌ Unhandled error:", err);
-  res.status(500).json({
-    success: false,
-    error: "Internal server error",
-    details: process.env.NODE_ENV === "development" ? err.message : undefined,
+  res.json({ 
+    status: "✅ Backend operational",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development"
   });
 });
 
+// API Routes
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/applicants", require("./routes/applicantRoutes"));
+app.use("/api/admins", require("./routes/adminRoutes"));
+app.use("/api/assessors", require("./routes/assessorRoutes"));
+
+// Frontend Routes (Fallback to index.html for SPA)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// ======================
+// Error Handling
+// ======================
+app.use((err, req, res, next) => {
+  console.error("❌ Server error:", err);
+  res.status(500).json({ 
+    success: false,
+    error: err.message || "Internal server error"
+  });
+});
+
+// ======================
 // Start Server
+// ======================
 (async () => {
   try {
-    console.log("🔗 Connecting to MongoDB...");
     await connectDB();
-    console.log("✅ MongoDB connected");
-
     app.listen(PORT, "0.0.0.0", () => {
-      console.log(`🚀 Server running at http://localhost:${PORT}`);
+      console.log(`
+      🚀 Server running on port ${PORT}
+      🌐 Allowed Origins: ${ALLOWED_ORIGINS.join(", ")}
+      `);
     });
   } catch (err) {
     console.error("❌ Failed to start server:", err);
