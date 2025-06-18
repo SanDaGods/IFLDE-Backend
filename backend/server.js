@@ -9,7 +9,7 @@ const app = express();
 
 // ENV Variables
 const PORT = process.env.PORT || 5000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+const FRONTEND_URL = process.env.FRONTEND_URL?.replace(/\/$/, "") || "http://localhost:3000";
 
 // Middleware
 app.use(express.json());
@@ -22,13 +22,15 @@ app.use(cors({
   exposedHeaders: ["set-cookie"],
 }));
 
-// Serve static files (if frontend is built into backend)
+console.log(`🌐 Allowed origin for CORS: ${FRONTEND_URL}`);
+
+// Serve static frontend if built into backend (optional)
 app.use(express.static(path.join(__dirname, "frontend")));
 
 // MongoDB Connection
 const connectDB = require("./config/db");
 
-// API Routes
+// Routes
 const routes = require("./routes");
 const applicants = require("./routes/applicantRoutes");
 const admins = require("./routes/adminRoutes");
@@ -43,7 +45,7 @@ app.use("/api", authRoutes);
 
 // Health Check
 app.get("/api/test", (req, res) => {
-  res.json({ message: "✅ Backend working!" });
+  res.json({ message: "✅ Backend working and CORS allowed." });
 });
 
 // Base Route
