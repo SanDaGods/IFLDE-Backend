@@ -96,6 +96,11 @@ app.get("/api/test", (req, res) => {
   });
 });
 
+
+app.get("/", (req, res) => {
+  res.send("✅ Backend is running. Visit /api/... for endpoints.");
+});
+
 // API Routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/applicants", require("./routes/applicantRoutes"));
