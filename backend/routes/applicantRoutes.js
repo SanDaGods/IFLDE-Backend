@@ -23,7 +23,7 @@ router.get(
   applicantAuthMiddleware,
   applicantController.profileId
 );
-router.get("/auth-status", applicantController.authStatus); // Will be /api/auth/auth-status
+router.get("/applicant/auth-status", applicantController.authStatus);
 router.post("/applicant/logout", applicantController.logout);
 router.get(
   "/api/fetch-user-files/:userId",
