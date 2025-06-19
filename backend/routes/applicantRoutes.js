@@ -4,8 +4,8 @@ const applicantController = require("../controllers/applicantController");
 const { applicantAuthMiddleware } = require("../middleware/authMiddleware");
 const upload = require("../middleware/fileUpload");
 
-router.post("/login", applicantController.login);
-router.post("/register", applicantController.register)
+router.post("/api/register", applicantController.register);
+router.post("/api/login", applicantController.login);
 router.post(
   "/api/submit-documents",
   upload.array("files"),
