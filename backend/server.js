@@ -84,18 +84,12 @@ app.use("/api/assessors", require("./routes/assessorRoutes"));
 // Static File Handling (Frontend support if needed)
 // ======================
 
-// Only do this if you're serving frontend files directly from backend
-// Otherwise, delete these if you're deploying frontend separately (like in Railway)
-app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
   res.send("✅ Backend is running. Visit /api/... for endpoints.");
 });
 
-// This line assumes there's an index.html in `public/`
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+
 
 // ======================
 // Error Handling
