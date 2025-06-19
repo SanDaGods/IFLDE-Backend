@@ -61,6 +61,30 @@ const connectDB = async () => {
   }
 };
 
+// Add this right after your MongoDB connection
+app.get('/api/check-db', async (req, res) => {
+  try {
+    // Method 1: Ping command
+    await mongoose.connection.db.command({ ping: 1 });
+    
+    // Method 2: Check readyState
+    const readyState = mongoose.connection.readyState;
+    const states = ["disconnected", "connected", "connecting", "disconnecting"];
+    
+    res.json({
+      status: "✅ MongoDB is connected",
+      readyState: `${readyState} (${states[readyState]})`,
+      dbName: mongoose.connection.name,
+      collections: await mongoose.connection.db.listCollections().toArray()
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "❌ MongoDB NOT connected",
+      error: err.message
+    });
+  }
+});
+
 // ======================
 // Routes
 // ======================
