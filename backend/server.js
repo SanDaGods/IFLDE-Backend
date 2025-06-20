@@ -29,22 +29,37 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
+      if (!origin && process.env.NODE_ENV === "development") {
+        console.warn("⚠️ No origin header (non-browser request?)");
+        return callback(null, true);
+      }
+
       if (!origin) return callback(null, true); // Allow non-browser requests
 
-      const originNormalized = origin.replace(/\/$/, "");
-      const isAllowed = ALLOWED_ORIGINS.some((url) => originNormalized === url.replace(/\/$/, ""));
+      const originNormalized = origin.replace(/\/$/, "").toLowerCase();
+      const isAllowed = ALLOWED_ORIGINS.some((url) => {
+        const allowedUrl = url.replace(/\/$/, "").toLowerCase();
+        return (
+          originNormalized === allowedUrl ||
+          originNormalized.endsWith(`.${allowedUrl.replace("https://", "")}`) // Allow subdomains
+        );
+      });
 
       if (isAllowed) {
-        console.log(`✅ Allowed CORS for: ${origin}`);
+        if (process.env.NODE_ENV === "development") {
+          console.log(`✅ Allowed CORS for: ${origin}`);
+        }
         return callback(null, true);
       } else {
         console.warn(`🚨 Blocked CORS for: ${origin}`);
-        return callback(new Error("Not allowed by CORS"));
+        return callback(new Error(`Origin "${origin}" not allowed by CORS`), false);
       }
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["set-cookie"], // Required for frontend to read cookies
+    maxAge: 86400, // Cache CORS preflight for 24hrs (optional)
   })
 );
 
