@@ -106,21 +106,38 @@ exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const applicant = await Applicant.findOne({ email });
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: "Email and password are required",
+      });
+    }
+
+    // Find applicant (case-insensitive search)
+    const applicant = await Applicant.findOne({ 
+      email: email.toLowerCase().trim() 
+    });
+    
     if (!applicant) {
       return res.status(401).json({
         success: false,
         error: "Invalid credentials",
+        details: "No account found with this email",
       });
     }
+
+    // Compare passwords
     const isMatch = await bcrypt.compare(password, applicant.password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
         error: "Invalid credentials",
+        details: "Incorrect password",
       });
     }
 
+    // Generate token
     const token = jwt.sign(
       {
         userId: applicant._id,
@@ -131,27 +148,32 @@ exports.login = async (req, res) => {
       { expiresIn: "1h" }
     );
 
+    // Set cookie
     res.cookie("applicantToken", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 3600000,
+      maxAge: 3600000, // 1 hour
       sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
       path: "/",
     });
 
+    // Success response
     res.json({
       success: true,
       message: "Login successful",
       data: {
         userId: applicant._id,
         email: applicant.email,
+        applicantId: applicant.applicantId,
       },
     });
+
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({
       success: false,
       error: "Login failed",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
