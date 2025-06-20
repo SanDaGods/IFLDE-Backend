@@ -100,7 +100,7 @@ app.get("/api/test", (req, res) => {
 
 // API Endpoints
 app.use("/api", require("./routes/authRoutes")); // Changed from "/api/auth"d
-app.use("/api", require("./routes/applicantRoutes"));
+app.use("/", require("./routes/applicantRoutes"));
 app.use("/api/admins", require("./routes/adminRoutes"));
 app.use("/api/assessors", require("./routes/assessorRoutes"));
 

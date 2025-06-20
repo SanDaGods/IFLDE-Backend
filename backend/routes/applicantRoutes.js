@@ -5,7 +5,7 @@ const { applicantAuthMiddleware } = require("../middleware/authMiddleware");
 const upload = require("../middleware/fileUpload");
 
 router.post("/register", applicantController.register); // Remove /api prefix
-router.post("/login", applicantController.login); 
+router.post("/api/login", applicantController.login);
 router.post(
   "/api/submit-documents",
   upload.array("files"),
