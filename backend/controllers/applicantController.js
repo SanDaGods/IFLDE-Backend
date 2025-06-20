@@ -105,39 +105,38 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
+  // Basic validation
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      error: "Email and password are required",
+    });
+  }
+
   try {
-    // Validate input
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: "Email and password are required",
-      });
+    // Check MongoDB connection first
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error("Database not connected");
     }
 
-    // Find applicant (case-insensitive search)
-    const applicant = await Applicant.findOne({ 
-      email: email.toLowerCase().trim() 
-    });
+    const applicant = await Applicant.findOne({ email: email.toLowerCase() });
     
-    if (!applicant) {
+    // Explicit check for null/undefined
+    if (applicant == null) {
       return res.status(401).json({
         success: false,
         error: "Invalid credentials",
-        details: "No account found with this email",
       });
     }
 
-    // Compare passwords
     const isMatch = await bcrypt.compare(password, applicant.password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
         error: "Invalid credentials",
-        details: "Incorrect password",
       });
     }
 
-    // Generate token
     const token = jwt.sign(
       {
         userId: applicant._id,
@@ -148,18 +147,14 @@ exports.login = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-      // Set cookie
-      // Set cookie
-      res.cookie("applicantToken", token, {
-        httpOnly: true,
-        secure: true,  // Must be true for SameSite=None
-        sameSite: "none",  // Required for cross-domain cookies
-        maxAge: 3600000, // 1 hour
-        path: "/",
-        domain: process.env.NODE_ENV === "production" ? "railway.app" : "localhost"
-      });
+    res.cookie("applicantToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 3600000,
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      path: "/",
+    });
 
-    // Success response
     res.json({
       success: true,
       message: "Login successful",
@@ -172,10 +167,19 @@ exports.login = async (req, res) => {
 
   } catch (error) {
     console.error("Login error:", error);
+    
+    // Differentiate between database errors and other errors
+    if (error.message.includes("Database not connected") || 
+        error.name === "MongoNetworkError") {
+      return res.status(503).json({
+        success: false,
+        error: "Service unavailable - Database connection failed",
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: "Login failed",
-      details: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

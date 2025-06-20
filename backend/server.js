@@ -106,14 +106,25 @@ app.get('/api/check-db', async (req, res) => {
 // ======================
 
 // Health Check
-app.get("/api/test", (req, res) => {
-  res.json({
-    status: "✅ Backend operational",
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development",
-  });
+// Add this right after your MongoDB connection
+app.get('/api/health', async (req, res) => {
+  try {
+    // Simple ping command to verify connection
+    await mongoose.connection.db.admin().command({ ping: 1 });
+    
+    res.json({
+      status: "✅ Healthy",
+      dbState: mongoose.STATES[mongoose.connection.readyState],
+      dbName: mongoose.connection.name,
+    });
+  } catch (err) {
+    res.status(503).json({
+      status: "❌ Unhealthy",
+      error: err.message,
+      dbState: mongoose.STATES[mongoose.connection.readyState]
+    });
+  }
 });
-
 // API Endpoints
 app.use("/api", require("./routes/authRoutes")); // Changed from "/api/auth"d
 app.use("/", require("./routes/applicantRoutes"));
