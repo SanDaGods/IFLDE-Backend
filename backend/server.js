@@ -14,8 +14,9 @@ const PORT = process.env.PORT || 8080;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 const ALLOWED_ORIGINS = [
-  FRONTEND_URL,
-  "http://localhost:3000", // Optional fallback for local dev
+  "https://ifldefrontend-production.up.railway.app",
+  "http://localhost:3000",
+  FRONTEND_URL
 ];
 
 // ======================
