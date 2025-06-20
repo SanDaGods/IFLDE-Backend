@@ -153,6 +153,15 @@ app.use((err, req, res, next) => {
   });
 });
 
+
+// Add to server.js
+app.get('/api/debug/models', (req, res) => {
+  res.json({
+    registeredModels: mongoose.modelNames(),
+    ApplicantSchema: mongoose.model('Applicant').schema.obj
+  });
+});
+
 // ======================
 // Start Server
 // ======================

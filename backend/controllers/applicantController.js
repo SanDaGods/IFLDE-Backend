@@ -104,32 +104,30 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-
-  // Basic validation
-  if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      error: "Email and password are required",
-    });
-  }
+  console.log(`Login attempt for: ${email}`); // Debug log
 
   try {
-    // Check MongoDB connection first
-    if (mongoose.connection.readyState !== 1) {
-      throw new Error("Database not connected");
-    }
+    // 1. Verify DB connection is REALLY working
+    const db = mongoose.connection.db;
+    await db.command({ ping: 1 });
+    console.log("✅ Database ping successful");
 
-    const applicant = await Applicant.findOne({ email: email.toLowerCase() });
-    
-    // Explicit check for null/undefined
-    if (applicant == null) {
+    // 2. Perform the query with explicit error handling
+    const applicant = await Applicant.findOne({ email: email.toLowerCase() }).exec();
+    console.log("Query result:", applicant ? "Found user" : "NO USER FOUND");
+
+    if (!applicant) {
+      console.log(`❌ No user found for email: ${email}`);
       return res.status(401).json({
         success: false,
         error: "Invalid credentials",
       });
     }
 
+    // 3. Compare passwords
     const isMatch = await bcrypt.compare(password, applicant.password);
+    console.log("Password match:", isMatch);
+
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -137,49 +135,14 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      {
-        userId: applicant._id,
-        role: "applicant",
-        email: applicant.email,
-      },
-      JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    res.cookie("applicantToken", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 3600000,
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-      path: "/",
-    });
-
-    res.json({
-      success: true,
-      message: "Login successful",
-      data: {
-        userId: applicant._id,
-        email: applicant.email,
-        applicantId: applicant.applicantId,
-      },
-    });
+    // ... rest of your success logic ...
 
   } catch (error) {
-    console.error("Login error:", error);
-    
-    // Differentiate between database errors and other errors
-    if (error.message.includes("Database not connected") || 
-        error.name === "MongoNetworkError") {
-      return res.status(503).json({
-        success: false,
-        error: "Service unavailable - Database connection failed",
-      });
-    }
-    
-    res.status(500).json({
+    console.error("🔥 FULL LOGIN ERROR:", error);
+    return res.status(500).json({
       success: false,
-      error: "Login failed",
+      error: "Login failed - Server error",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
     });
   }
 };
