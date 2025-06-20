@@ -149,14 +149,14 @@ exports.login = async (req, res) => {
     );
 
     // Set cookie
-    res.cookie("applicantToken", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 3600000, // 1 hour
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-      path: "/",
-    });
-
+res.cookie("applicantToken", token, {
+  httpOnly: true,       // Prevent JS access (security)
+  secure: true,         // REQUIRED for SameSite=None (must use HTTPS)
+  sameSite: "none",     // REQUIRED for cross-origin cookies
+  maxAge: 3600000,      // 1 hour expiry
+  path: "/",            // Available on all paths
+  domain: ".railway.app" // Allow cookies across *.railway.app subdomains
+});
     // Success response
     res.json({
       success: true,
